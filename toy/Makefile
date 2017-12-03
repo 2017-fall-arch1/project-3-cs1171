@@ -10,11 +10,11 @@ AS              = msp430-elf-gcc -mmcu=${CPU} -c
 all: toy.elf
 
 #additional rules for files
-shapemotion.elf: ${COMMON_OBJECTS} toy.o wdt_handler.o
+toy.elf: ${COMMON_OBJECTS} toy.o wdt_handler.o
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^ -lTimer -lLcd -lShape -lCircle -lp2sw
 
 load: toy.elf
 	mspdebug rf2500 "prog $^"
 
 clean:
-	rm -f *.o *.elf
+	rm -f *.o *.elf *~
