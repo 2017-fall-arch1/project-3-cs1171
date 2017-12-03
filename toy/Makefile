@@ -10,8 +10,10 @@ AS              = msp430-elf-gcc -mmcu=${CPU} -c
 all: toy.elf
 
 #additional rules for files
-toy.elf: ${COMMON_OBJECTS} toy.o wdt_handler.o
+toy.elf: ${COMMON_OBJECTS} toy.o wdt_handler.o buzzer.o
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^ -lTimer -lLcd -lShape -lCircle -lp2sw
+
+buzzer.o: buzzer.h
 
 load: toy.elf
 	mspdebug rf2500 "prog $^"

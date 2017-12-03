@@ -5,6 +5,7 @@
 #include <p2switches.h>
 #include <shape.h>
 #include <abCircle.h>
+#include <buzzer.h>
 
 AbRect paddle = {abRectGetBounds, abRectCheck, {15,1}}; /**< 15x1 paddle >**/
 AbRect ball = {abRectGetBounds, abRectCheck, {1,1}}; /**< 1x1 'ball' >**/
