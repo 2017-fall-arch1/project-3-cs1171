@@ -14,15 +14,23 @@ AbRectOutline fieldOutline = {	/* playing field */
   {screenWidth/2 - 10, screenHeight/2 - 10}
 };
 
+Layer layer3 = {               /**< ball >**/
+  (AbShape *)&ball,
+  {screenWidth/2,(screenHeight/2)+66},     /* right above bottom paddle */
+  {0,0}, {0,0},                            /* last & next pos */
+  COLOR_RED,
+  0
+};
+
 Layer fieldLayer = {		/* playing field as a layer */
   (AbShape *) &fieldOutline,
   {screenWidth/2, screenHeight/2},          /**< center */
   {0,0}, {0,0},				    /* last & next pos */
-  COLOR_WHITE,
-  0
+  COLOR_BLACK,
+  &layer3,
 };
 
-Layer layer2 = {		/**< paddle 1 >**/
+Layer layer1 = {		/**< paddle 1 >**/
   (AbShape *)&paddle,
   {screenWidth/2, (screenHeight/2)+68},     /* middle bottom */
   {0,0}, {0,0},				    /* last & next pos */
@@ -30,19 +38,11 @@ Layer layer2 = {		/**< paddle 1 >**/
   &fieldLayer,
 };
 
-Layer layer1 = {		/**< paddle 2 >**/
+Layer layer0 = {		/**< paddle 2 >**/
   (AbShape *)&paddle,
   {screenWidth/2, (screenHeight/2)-68},     /* middle top */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_BLACK,
-  &layer2,
-};
-
-Layer layer0 = {               /**< ball >**/
-  (AbShape *)&ball,
-  {screenWidth/2,(screenHeight/2)+66},     /* right above bottom paddle */
-  {0,0}, {0,0},                            /* last & next pos */
-  COLOR_RED,
   &layer1,
 };
 
@@ -57,7 +57,9 @@ typedef struct MovLayer_s {
 } MovLayer;
 
 /* initial value of {0,0} will be overwritten */
-MovLayer ml0 = { &layer1, {0,0}, 0 }; 
+MovLayer ml3 = { &layer3, {1,1}, 0 };
+MovLayer ml1 = { &layer1, {1,0}, &ml3 };
+MovLayer ml0 = { &layer0, {1,0}, &ml1 };
 
 void movLayerDraw(MovLayer *movLayers, Layer *layers)
 {
@@ -124,8 +126,32 @@ void mlAdvance(MovLayer *ml, Region *fence)
   } /**< for ml */
 }
 
+void p1ctrl(u_int sw) {
+  if(!(sw & (1<<0))) {
+    ml1.velocity.axes[0] = -1;
+  }
+  else if(!(sw & (1<<1))) {
+    ml1.velocity.axes[0] = 1;
+  }
+  else {
+    ml1.velocity.axes[0] = 0;
+  }
+}
 
-u_int bgColor = COLOR_BLUE;     /**< The background color */
+void p2ctrl(u_int sw) {
+  if(!(sw & (1<<2))) {
+    ml0.velocity.axes[0] = -1;
+  }
+  else if(!(sw & (1<<3))) {
+    ml0.velocity.axes[0] = 1;
+  }
+  else {
+    ml0.velocity.axes[0] = 0;
+  }
+}
+
+
+u_int bgColor = COLOR_WHITE;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
 
 Region fieldFence;		/**< fence around playing field  */
@@ -142,32 +168,40 @@ void main()
   p2sw_init(15);
 
   shapeInit();
-
+  
   layerInit(&layer0);
   layerDraw(&layer0);
-
   layerGetBounds(&fieldLayer, &fieldFence);
 
 
   enableWDTInterrupts();      /**< enable periodic interrupt */
   or_sr(0x8);	              /**< GIE (enable interrupts) */
   u_char width = screenWidth, height = screenHeight;
-
-  drawString5x7(10,10, "Score: ", COLOR_GREEN, COLOR_BLUE);
+  char p1score[1];
+  char p2score[1];
+  p1score[0] = '0';
+  p1score[1] = '\0';
+  p2score[0] = '0';
+  p2score[1] = '\0';
+  drawString5x7(1,1, "P1:", COLOR_BLACK, COLOR_WHITE);
+  drawString5x7(98,1, "P2:0", COLOR_BLACK, COLOR_WHITE);
+  drawString5x7(20,1, p1score, COLOR_BLACK, COLOR_WHITE);
+  drawString5x7(122,1, p2score, COLOR_BLACK, COLOR_WHITE);
   
-  for(;;) { 
+  u_int sw;
+  
+  for(;;) {
+    sw = p2sw_read();
+
     while (!redrawScreen) { /**< Pause CPU if screen doesn't need updating */
       or_sr(0x10);	      /**< CPU OFF */
     }
-    redrawScreen = 0;
-    movLayerDraw(&ml0, &layer0);
+    
+    p1ctrl(sw);
+    p2ctrl(sw);
 
-    /**    u_int switches = p2sw_read(), i;
-    char str[5];
-    for(i = 0;i < 4;i++)
-      str[i] = (switches & (1<<i)) ? '-' : '0'+i;
-    str[4] = 0;
-    drawString5x7(20,20,str,COLOR_GREEN,COLOR_BLUE); **/
+    redrawScreen = 0;
+    movLayerDraw(&ml0, &layer0); 
   }
 }
 
@@ -176,10 +210,11 @@ void wdt_c_handler()
 {
   static short count = 0;
   count ++;
-  if (count == 15) {
+  if (count == 5) {
     mlAdvance(&ml0, &fieldFence);
-    if (p2sw_read())
+    if (p2sw_read()) {
       redrawScreen = 1;
+    }
     count = 0;
   }
 }
