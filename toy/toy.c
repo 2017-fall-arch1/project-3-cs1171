@@ -17,7 +17,8 @@
 #define GREEN_LED BIT6
 
 
-AbRect rect10 = {abRectGetBounds, abRectCheck, {10,10}}; /**< 10x10 rectangle >**/
+AbRect paddle = {abRectGetBounds, abRectCheck, {15,1}}; /**< 15x1 paddle >**/
+AbRect ball = {abRectGetBounds, abRectCheck, {1,1}}; /**< 1x1 'ball' >**/
 
 AbRectOutline fieldOutline = {	/* playing field */
   abRectOutlineGetBounds, abRectOutlineCheck,   
@@ -28,23 +29,23 @@ Layer fieldLayer = {		/* playing field as a layer */
   (AbShape *) &fieldOutline,
   {screenWidth/2, screenHeight/2},/**< center */
   {0,0}, {0,0},				    /* last & next pos */
-  COLOR_BLACK,
+  COLOR_WHITE,
   0
 };
 
 Layer layer1 = {		/**< Layer with a red square */
-  (AbShape *)&rect10,
-  {screenWidth/2, (screenHeight/2)+60},
+  (AbShape *)&paddle,
+  {screenWidth/2, (screenHeight/2)+68},
   {0,0}, {0,0},				    /* last & next pos */
-  COLOR_RED,
+  COLOR_BLACK,
   &fieldLayer,
 };
 
 Layer layer0 = {
-  (AbShape *)&circle14,
-  {screenWidth/2,(screenHeight/2)+40},
+  (AbShape *)&ball,
+  {screenWidth/2,(screenHeight/2)+66},
   {0,0}, {0,0},
-  COLOR_BLACK,
+  COLOR_RED,
   &layer1,
 };
 
