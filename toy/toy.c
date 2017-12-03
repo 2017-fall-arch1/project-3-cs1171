@@ -1,11 +1,3 @@
-/** \file shapemotion.c
- *  \brief This is a simple shape motion demo.
- *  This demo creates two layers containing shapes.
- *  One layer contains a rectangle and the other a circle.
- *  While the CPU is running the green LED is on, and
- *  when the screen does not need to be redrawn the CPU
- *  is turned off along with the green LED.
- */  
 #include <msp430.h>
 #include <libTimer.h>
 #include <lcdutils.h>
@@ -13,9 +5,6 @@
 #include <p2switches.h>
 #include <shape.h>
 #include <abCircle.h>
-
-#define GREEN_LED BIT6
-
 
 AbRect paddle = {abRectGetBounds, abRectCheck, {15,1}}; /**< 15x1 paddle >**/
 AbRect ball = {abRectGetBounds, abRectCheck, {1,1}}; /**< 1x1 'ball' >**/
@@ -147,9 +136,6 @@ Region fieldFence;		/**< fence around playing field  */
  */
 void main()
 {
-  P1DIR |= GREEN_LED;		/**< Green led on when CPU on */		
-  P1OUT |= GREEN_LED;
-
   configureClocks();
   lcd_init();
   shapeInit();
@@ -158,11 +144,7 @@ void main()
   shapeInit();
 
   layerInit(&layer0);
-  //  layerInit(&layer1);
-  //  layerInit(&layer2);
   layerDraw(&layer0);
-  //  layerDraw(&layer1);
-  //  layerDraw(&layer2);
 
   layerGetBounds(&fieldLayer, &fieldFence);
 
@@ -171,23 +153,21 @@ void main()
   or_sr(0x8);	              /**< GIE (enable interrupts) */
   u_char width = screenWidth, height = screenHeight;
 
-  drawString5x7(10,10, "Score:", COLOR_GREEN, COLOR_BLUE);
+  drawString5x7(10,10, "Score: ", COLOR_GREEN, COLOR_BLUE);
   
   for(;;) { 
     while (!redrawScreen) { /**< Pause CPU if screen doesn't need updating */
-      P1OUT &= ~GREEN_LED;    /**< Green led off witHo CPU */
       or_sr(0x10);	      /**< CPU OFF */
     }
-    P1OUT |= GREEN_LED;       /**< Green led on when CPU on */
     redrawScreen = 0;
     movLayerDraw(&ml0, &layer0);
 
-    u_int switches = p2sw_read(), i;
+    /**    u_int switches = p2sw_read(), i;
     char str[5];
     for(i = 0;i < 4;i++)
       str[i] = (switches & (1<<i)) ? '-' : '0'+i;
     str[4] = 0;
-    drawString5x7(20,20,str,COLOR_GREEN,COLOR_BLUE);
+    drawString5x7(20,20,str,COLOR_GREEN,COLOR_BLUE); **/
   }
 }
 
@@ -195,13 +175,11 @@ void main()
 void wdt_c_handler()
 {
   static short count = 0;
-  P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
   count ++;
   if (count == 15) {
     mlAdvance(&ml0, &fieldFence);
     if (p2sw_read())
       redrawScreen = 1;
     count = 0;
-  } 
-  P1OUT &= ~GREEN_LED;		    /**< Green LED off when cpu off */
+  }
 }
