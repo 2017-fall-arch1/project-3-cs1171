@@ -27,24 +27,32 @@ AbRectOutline fieldOutline = {	/* playing field */
 
 Layer fieldLayer = {		/* playing field as a layer */
   (AbShape *) &fieldOutline,
-  {screenWidth/2, screenHeight/2},/**< center */
+  {screenWidth/2, screenHeight/2},          /**< center */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_WHITE,
   0
 };
 
-Layer layer1 = {		/**< Layer with a red square */
+Layer layer2 = {		/**< paddle 1 >**/
   (AbShape *)&paddle,
-  {screenWidth/2, (screenHeight/2)+68},
+  {screenWidth/2, (screenHeight/2)+68},     /* middle bottom */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_BLACK,
   &fieldLayer,
 };
 
-Layer layer0 = {
+Layer layer1 = {		/**< paddle 2 >**/
+  (AbShape *)&paddle,
+  {screenWidth/2, (screenHeight/2)-68},     /* middle top */
+  {0,0}, {0,0},				    /* last & next pos */
+  COLOR_BLACK,
+  &layer2,
+};
+
+Layer layer0 = {               /**< ball >**/
   (AbShape *)&ball,
-  {screenWidth/2,(screenHeight/2)+66},
-  {0,0}, {0,0},
+  {screenWidth/2,(screenHeight/2)+66},     /* right above bottom paddle */
+  {0,0}, {0,0},                            /* last & next pos */
   COLOR_RED,
   &layer1,
 };
@@ -145,21 +153,26 @@ void main()
   configureClocks();
   lcd_init();
   shapeInit();
-  p2sw_init(1);
+  p2sw_init(15);
 
   shapeInit();
 
   layerInit(&layer0);
+  //  layerInit(&layer1);
+  //  layerInit(&layer2);
   layerDraw(&layer0);
-
+  //  layerDraw(&layer1);
+  //  layerDraw(&layer2);
 
   layerGetBounds(&fieldLayer, &fieldFence);
 
 
   enableWDTInterrupts();      /**< enable periodic interrupt */
   or_sr(0x8);	              /**< GIE (enable interrupts) */
+  u_char width = screenWidth, height = screenHeight;
 
-
+  drawString5x7(10,10, "Score:", COLOR_GREEN, COLOR_BLUE);
+  
   for(;;) { 
     while (!redrawScreen) { /**< Pause CPU if screen doesn't need updating */
       P1OUT &= ~GREEN_LED;    /**< Green led off witHo CPU */
@@ -168,6 +181,13 @@ void main()
     P1OUT |= GREEN_LED;       /**< Green led on when CPU on */
     redrawScreen = 0;
     movLayerDraw(&ml0, &layer0);
+
+    u_int switches = p2sw_read(), i;
+    char str[5];
+    for(i = 0;i < 4;i++)
+      str[i] = (switches & (1<<i)) ? '-' : '0'+i;
+    str[4] = 0;
+    drawString5x7(20,20,str,COLOR_GREEN,COLOR_BLUE);
   }
 }
 
