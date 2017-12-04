@@ -5,19 +5,26 @@
 #include <p2switches.h>
 #include <shape.h>
 #include <abCircle.h>
-#include <buzzer.h>
+#include "buzzer.h"
 
-AbRect paddle = {abRectGetBounds, abRectCheck, {15,1}}; /**< 15x1 paddle >**/
-AbRect ball = {abRectGetBounds, abRectCheck, {1,1}}; /**< 1x1 'ball' >**/
+AbRect ball = {                 /**< 1x1 'ball' >**/
+  abRectGetBounds, abRectCheck,
+  {1,1}
+};
+
+AbRectOutline paddle = {               /**< 15x1 paddle >**/
+  abRectGetBounds, abRectCheck,
+  {15,1}
+};
 
 AbRectOutline fieldOutline = {	/* playing field */
   abRectOutlineGetBounds, abRectOutlineCheck,   
   {screenWidth/2 - 10, screenHeight/2 - 10}
 };
 
-Layer layer3 = {               /**< ball >**/
+Layer layer4 = {                /**< ball >**/
   (AbShape *)&ball,
-  {screenWidth/2,(screenHeight/2)+66},     /* right above bottom paddle */
+  {screenWidth/2,(screenHeight/2)+64},     /* right above bottom paddle */
   {0,0}, {0,0},                            /* last & next pos */
   COLOR_RED,
   0
@@ -28,10 +35,10 @@ Layer fieldLayer = {		/* playing field as a layer */
   {screenWidth/2, screenHeight/2},          /**< center */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_BLACK,
-  &layer3,
+  &layer4,
 };
 
-Layer layer1 = {		/**< paddle 1 >**/
+Layer layer2 = {		/**< paddle 1 >**/
   (AbShape *)&paddle,
   {screenWidth/2, (screenHeight/2)+68},     /* middle bottom */
   {0,0}, {0,0},				    /* last & next pos */
@@ -44,7 +51,7 @@ Layer layer0 = {		/**< paddle 2 >**/
   {screenWidth/2, (screenHeight/2)-68},     /* middle top */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_BLACK,
-  &layer1,
+  &layer2,
 };
 
 /** Moving Layer
@@ -58,9 +65,9 @@ typedef struct MovLayer_s {
 } MovLayer;
 
 /* initial value of {0,0} will be overwritten */
-MovLayer ml3 = { &layer3, {1,1}, 0 };
-MovLayer ml1 = { &layer1, {1,0}, &ml3 };
-MovLayer ml0 = { &layer0, {1,0}, &ml1 };
+MovLayer ml4 = { &layer4, {1,1}, 0 };
+MovLayer ml2 = { &layer2, {1,0}, &ml4 };
+MovLayer ml0 = { &layer0, {1,0}, &ml2 };
 
 void movLayerDraw(MovLayer *movLayers, Layer *layers)
 {
@@ -127,15 +134,17 @@ void mlAdvance(MovLayer *ml, Region *fence)
   } /**< for ml */
 }
 
+
+/** Code for reading movement switches and movement speed **/
 void p1ctrl(u_int sw) {
   if(!(sw & (1<<0))) {
-    ml1.velocity.axes[0] = -1;
+    ml2.velocity.axes[0] = -1;
   }
   else if(!(sw & (1<<1))) {
-    ml1.velocity.axes[0] = 1;
+    ml2.velocity.axes[0] = 1;
   }
   else {
-    ml1.velocity.axes[0] = 0;
+    ml2.velocity.axes[0] = 0;
   }
 }
 
@@ -151,12 +160,55 @@ void p2ctrl(u_int sw) {
   }
 }
 
+/** Code for detecting ball collisions **/
+void collision() {
+  if((layer4.pos.axes[1] >= (layer2.pos.axes[1] - 1))
+     && (layer4.pos.axes[0] <= (layer2.pos.axes[0] + 12))
+     && (layer4.pos.axes[0] >= (layer2.pos.axes[0] - 12))) {
+    layer4.posNext.axes[1] -= 2;
+    ml4.velocity.axes[1] = -ml4.velocity.axes[1];
+  }
+  
+  else if((layer4.pos.axes[1] <= (layer0.pos.axes[1] + 1))
+	  && (layer4.pos.axes[0] >= (layer0.pos.axes[0] + 12))
+	  && (layer4.pos.axes[0] <= (layer0.pos.axes[0] - 12))) {
+    layer4.posNext.axes[1] += 1;
+    ml4.velocity.axes[1] = -ml4.velocity.axes[1];
+  }
+}
+
+/** Code for drawing and updating score **/
+void score(char * score, int player)
+{
+  char * sc = score;
+  
+  if(player == 1) {
+    drawString5x7(1, 1, "P1:", COLOR_BLACK, COLOR_WHITE);
+    drawString5x7(20, 1, sc, COLOR_BLACK, COLOR_WHITE);
+  }
+  
+  else if(player == 2) {
+    drawString5x7(98, 1, "P2:", COLOR_BLACK, COLOR_WHITE);
+    drawString5x7(122, 1, sc, COLOR_BLACK, COLOR_WHITE);
+  }
+}
+
+/* void collision2() {
+  if((layer4.pos.axes[1] <= (layer0.pos.axes[1] + 1))
+	  && (layer4.pos.axes[0] >= (layer0.pos.axes[0] + 12))
+	  && (layer4.pos.axes[0] <= (layer0.pos.axes[0] - 12))) {
+    layer4.posNext.axes[1] += 2;
+    ml4.velocity.axes[1] = -ml4.velocity.axes[1];
+  }
+  } */
 
 u_int bgColor = COLOR_WHITE;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
 
 Region fieldFence;		/**< fence around playing field  */
-
+Region pad1;
+Region pad2;
+Region pad3;
 
 /** Initializes everything, enables interrupts and green LED, 
  *  and handles the rendering for the screen
@@ -169,27 +221,19 @@ void main()
   p2sw_init(15);
 
   shapeInit();
-  
+
+  layerGetBounds(&layer2, &pad1);
   layerInit(&layer0);
   layerDraw(&layer0);
   layerGetBounds(&fieldLayer, &fieldFence);
 
-
   enableWDTInterrupts();      /**< enable periodic interrupt */
   or_sr(0x8);	              /**< GIE (enable interrupts) */
-  u_char width = screenWidth, height = screenHeight;
-  char p1score[1];
-  char p2score[1];
-  p1score[0] = '0';
-  p1score[1] = '\0';
-  p2score[0] = '0';
-  p2score[1] = '\0';
-  drawString5x7(1,1, "P1:", COLOR_BLACK, COLOR_WHITE);
-  drawString5x7(98,1, "P2:0", COLOR_BLACK, COLOR_WHITE);
-  drawString5x7(20,1, p1score, COLOR_BLACK, COLOR_WHITE);
-  drawString5x7(122,1, p2score, COLOR_BLACK, COLOR_WHITE);
-  
+  u_char width = screenWidth, height = screenHeight;  
   u_int sw;
+
+  score("0\n", 1);
+  score("0\n", 2);
   
   for(;;) {
     sw = p2sw_read();
@@ -200,9 +244,10 @@ void main()
     
     p1ctrl(sw);
     p2ctrl(sw);
+    collision();
 
     redrawScreen = 0;
-    movLayerDraw(&ml0, &layer0); 
+    movLayerDraw(&ml0, &layer0);
   }
 }
 
@@ -211,7 +256,7 @@ void wdt_c_handler()
 {
   static short count = 0;
   count ++;
-  if (count == 5) {
+  if (count == 15) {
     mlAdvance(&ml0, &fieldFence);
     if (p2sw_read()) {
       redrawScreen = 1;
