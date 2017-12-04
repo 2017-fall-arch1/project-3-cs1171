@@ -169,7 +169,7 @@ void collision() {
     ml4.velocity.axes[1] = -ml4.velocity.axes[1];
   }
   
-  else if((layer4.pos.axes[1] <= (layer0.pos.axes[1] + 1))
+  if((layer4.pos.axes[1] <= (layer0.pos.axes[1] + 1))
 	  && (layer4.pos.axes[0] >= (layer0.pos.axes[0] + 12))
 	  && (layer4.pos.axes[0] <= (layer0.pos.axes[0] - 12))) {
     layer4.posNext.axes[1] += 1;
@@ -187,7 +187,7 @@ void score(char * score, int player)
     drawString5x7(20, 1, sc, COLOR_BLACK, COLOR_WHITE);
   }
   
-  else if(player == 2) {
+  if(player == 2) {
     drawString5x7(98, 1, "P2:", COLOR_BLACK, COLOR_WHITE);
     drawString5x7(122, 1, sc, COLOR_BLACK, COLOR_WHITE);
   }
@@ -205,10 +205,7 @@ void score(char * score, int player)
 u_int bgColor = COLOR_WHITE;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
 
-Region fieldFence;		/**< fence around playing field  */
-Region pad1;
-Region pad2;
-Region pad3;
+Region fieldFence;		/**< fence around playing field >**/
 
 /** Initializes everything, enables interrupts and green LED, 
  *  and handles the rendering for the screen
@@ -219,21 +216,21 @@ void main()
   lcd_init();
   shapeInit();
   p2sw_init(15);
-
+  
   shapeInit();
-
+  
   layerGetBounds(&layer2, &pad1);
   layerInit(&layer0);
   layerDraw(&layer0);
   layerGetBounds(&fieldLayer, &fieldFence);
-
+  
   enableWDTInterrupts();      /**< enable periodic interrupt */
   or_sr(0x8);	              /**< GIE (enable interrupts) */
   u_char width = screenWidth, height = screenHeight;  
   u_int sw;
 
-  score("0\n", 1);
-  score("0\n", 2);
+  score("00\n", 1);
+  score("00\n", 2);
   
   for(;;) {
     sw = p2sw_read();
@@ -245,7 +242,7 @@ void main()
     p1ctrl(sw);
     p2ctrl(sw);
     collision();
-
+    
     redrawScreen = 0;
     movLayerDraw(&ml0, &layer0);
   }
@@ -256,7 +253,7 @@ void wdt_c_handler()
 {
   static short count = 0;
   count ++;
-  if (count == 15) {
+  if (count == 5) {
     mlAdvance(&ml0, &fieldFence);
     if (p2sw_read()) {
       redrawScreen = 1;
