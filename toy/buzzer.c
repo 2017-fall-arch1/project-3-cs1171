@@ -48,7 +48,32 @@ void noBuzz()
   buzzer_set_period(0);
 }
 
-void buzz()
+void buzz1()
 {
-  buzzer_advance_frequency();
+  for(int i = 0;i < 1000;i++)
+    {
+      __delay_cycles(200000);
+      buzzer_advance_frequency();
+    }
+  noBuzz();
+}
+
+void buzz2()
+{
+  for(int i = 0;i < 100;i++)
+    {
+      __delay_cycles(2000);
+      buzzer_advance_frequency();
+    }
+  noBuzz();
+}
+
+void buzz3()
+{
+  for(int i = 0;i < 100;i++)
+    {
+      __delay_cycles(5000);
+      buzzer_advance_frequency();
+    }
+  noBuzz();
 }

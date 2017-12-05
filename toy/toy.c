@@ -5,6 +5,7 @@
 #include <p2switches.h>
 #include <shape.h>
 #include <abCircle.h>
+#include <stdlib.h>
 #include "buzzer.h"
 
 AbRect ball = {                 /**< 1x1 'ball' >**/
@@ -160,47 +161,76 @@ void p2ctrl(u_int sw) {
   }
 }
 
-/** Code for detecting ball collisions **/
-void collision() {
+/** Code for detecting ball collisions for each paddle **/
+void collision1() {
   if((layer4.pos.axes[1] >= (layer2.pos.axes[1] - 1))
-     && (layer4.pos.axes[0] <= (layer2.pos.axes[0] + 12))
-     && (layer4.pos.axes[0] >= (layer2.pos.axes[0] - 12))) {
+     && (layer4.pos.axes[0] <= (layer2.pos.axes[0] + 15))
+     && (layer4.pos.axes[0] >= (layer2.pos.axes[0] - 15))) {
+    buzz2();
     layer4.posNext.axes[1] -= 2;
     ml4.velocity.axes[1] = -ml4.velocity.axes[1];
   }
   
-  if((layer4.pos.axes[1] <= (layer0.pos.axes[1] + 1))
-	  && (layer4.pos.axes[0] >= (layer0.pos.axes[0] + 12))
-	  && (layer4.pos.axes[0] <= (layer0.pos.axes[0] - 12))) {
-    layer4.posNext.axes[1] += 1;
+  /*else if((layer4.pos.axes[1] <= (layer0.pos.axes[1] + 1))
+	  && (layer4.pos.axes[0] >= (layer0.pos.axes[0] + 15))
+	  && (layer4.pos.axes[0] <= (layer0.pos.axes[0] - 15))) {
+    buzz2();
+    layer4.posNext.axes[1] += 2;
     ml4.velocity.axes[1] = -ml4.velocity.axes[1];
-  }
+    }*/
 }
 
-/** Code for drawing and updating score **/
-void score(char * score, int player)
-{
-  char * sc = score;
-  
-  if(player == 1) {
-    drawString5x7(1, 1, "P1:", COLOR_BLACK, COLOR_WHITE);
-    drawString5x7(20, 1, sc, COLOR_BLACK, COLOR_WHITE);
-  }
-  
-  if(player == 2) {
-    drawString5x7(98, 1, "P2:", COLOR_BLACK, COLOR_WHITE);
-    drawString5x7(122, 1, sc, COLOR_BLACK, COLOR_WHITE);
-  }
-}
-
-/* void collision2() {
+void collision2() {
   if((layer4.pos.axes[1] <= (layer0.pos.axes[1] + 1))
-	  && (layer4.pos.axes[0] >= (layer0.pos.axes[0] + 12))
-	  && (layer4.pos.axes[0] <= (layer0.pos.axes[0] - 12))) {
+	  && (layer4.pos.axes[0] >= (layer0.pos.axes[0] + 15))
+	  && (layer4.pos.axes[0] <= (layer0.pos.axes[0] - 15))) {
+    buzz2();
     layer4.posNext.axes[1] += 2;
     ml4.velocity.axes[1] = -ml4.velocity.axes[1];
   }
-  } */
+}
+
+char score1[] = "00";
+char score2[] = "00";
+
+/** Code for drawing and updating score **/
+void updateScore(int player) {  
+  if(player == 1) {
+    layer4.posNext.axes[1] += 2;
+    
+    score1[1] += 1;
+    
+    drawString5x7(1, 1, "P1:", COLOR_BLACK, COLOR_WHITE);
+    drawString5x7(20, 1, score1, COLOR_BLACK, COLOR_WHITE);
+  }
+  
+  else if(player == 2) {    
+    score2[1] += 1;
+
+    drawString5x7(90, 1, "P2:", COLOR_BLACK, COLOR_WHITE);
+    drawString5x7(110, 1, score2, COLOR_BLACK, COLOR_WHITE);
+  }
+}
+
+/** Code for detecting a score for each player **/
+int point() {
+  if(layer4.pos.axes[1] == (screenHeight/2 - 67)) {
+    buzz3();
+    return 1;
+  }
+  
+  else if(layer4.pos.axes[1] == (screenHeight/2 + 68)) {
+    buzz3();
+    return 2;
+  }
+  else
+    return 0;
+}
+
+void end()
+{
+  system("pause");
+}
 
 u_int bgColor = COLOR_WHITE;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
@@ -210,27 +240,26 @@ Region fieldFence;		/**< fence around playing field >**/
 /** Initializes everything, enables interrupts and green LED, 
  *  and handles the rendering for the screen
  */
-void main()
-{
+void main() {
   configureClocks();
   lcd_init();
   shapeInit();
   p2sw_init(15);
-  
   shapeInit();
-  
-  layerGetBounds(&layer2, &pad1);
   layerInit(&layer0);
   layerDraw(&layer0);
   layerGetBounds(&fieldLayer, &fieldFence);
-  
+  buzzer_init();
   enableWDTInterrupts();      /**< enable periodic interrupt */
   or_sr(0x8);	              /**< GIE (enable interrupts) */
   u_char width = screenWidth, height = screenHeight;  
   u_int sw;
-
-  score("00\n", 1);
-  score("00\n", 2);
+  
+  score1[1] -= 1;
+  score2[1] -= 1;
+  
+  updateScore(1);
+  updateScore(2);
   
   for(;;) {
     sw = p2sw_read();
@@ -241,7 +270,43 @@ void main()
     
     p1ctrl(sw);
     p2ctrl(sw);
-    collision();
+    collision1();
+
+    /* disabled for demo
+       collision2(); */
+
+    if(point() > 0)
+      {
+	updateScore(point());
+      }
+
+    if(score1[1] == ':')
+      {
+	score1[0] += 1;
+	score1[1] -= 11;
+	updateScore(1);
+	
+	if(score1[0] == '1')
+	  {
+	    drawString5x7(10, (screenHeight/2), "GAME OVER, P1 WINS", COLOR_RED, COLOR_YELLOW);
+	    buzz1();
+	    end();
+	  }
+      }
+    
+    if(score2[1] == ':')
+      {
+	score2[0] += 1;
+	score2[1] -= 11;
+	updateScore(2);
+	
+	if(score2[0] == '1')
+	  {
+	    drawString5x7(10, (screenHeight/2), "GAME OVER, P2 WINS", COLOR_RED, COLOR_YELLOW);
+	    buzz1();
+	    end();
+	  }
+      }
     
     redrawScreen = 0;
     movLayerDraw(&ml0, &layer0);
@@ -249,8 +314,7 @@ void main()
 }
 
 /** Watchdog timer interrupt handler. 15 interrupts/sec */
-void wdt_c_handler()
-{
+void wdt_c_handler() {
   static short count = 0;
   count ++;
   if (count == 5) {
