@@ -5,8 +5,8 @@ control the paddles.
 
 Instructions:
 These commands should be entered from the parent directory (./project3):
-make all
-cd toy/
+make all;
+cd ./toy;
 make load
 
 This will create all necessary library files and then load the program into
