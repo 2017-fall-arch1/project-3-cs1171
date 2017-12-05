@@ -1,4 +1,9 @@
 # Project 3: LCD Game
+
+##############################################################
+# All of the project files are located in the /toy directory #
+##############################################################
+
 ## Introduction
 
 Continuing your effort to help ACME Solutions provide Christmas toys, 
